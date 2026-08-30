@@ -31,60 +31,7 @@
   input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   input[type="number"] { -moz-appearance: textfield; }
 
-  .brand { text-align: center; }
-  .brand-eyebrow { font-size: 11px; letter-spacing: 3px; color: #FF8FE0; text-transform: uppercase; font-weight: 700; }
-  .brand-title { font-size: 22px; color: #FFF6F0; font-weight: 700; font-family: 'Baloo 2', sans-serif; }
-
-  .tabs { display: flex; gap: 6px; background: #34275A; padding: 4px; border-radius: 14px; }
-  .tab-btn {
-    display: flex; align-items: center; gap: 6px;
-    padding: 8px 14px; border-radius: 10px; border: none;
-    background: transparent; color: #C9BCE0;
-    font-size: 12px; font-weight: 700; cursor: pointer;
-  }
-  .tab-btn.active { background: #FF8FE0; color: #241B3A; }
-
-  .phone {
-    width: 320px; max-width: 100%;
-    background: #1a1330;
-    border-radius: 34px;
-    border: 6px solid #0d0819;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-    position: relative;
-    padding-bottom: 10px;
-    margin: 0 auto;
-  }
-  .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 90px; height: 18px; background: #0d0819; border-radius: 10px; }
-  .statusbar { display: flex; justify-content: space-between; font-size: 11px; color: #C9BCE0; padding: 14px 22px 4px 22px; }
-  .phone-content { padding: 10px 16px 16px 16px; min-height: 460px; }
-
-  .widget-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 4px; }
-  .widget-cell { text-align: center; }
-  .app-icon-placeholder { width: 44px; height: 44px; border-radius: 11px; background: #3E2F68; margin: 0 auto 4px; }
-  .app-icon-label { font-size: 9px; color: #C9BCE0; }
-  .widget-hint { text-align: center; margin-top: 16px; font-size: 11px; color: #C9BCE0; line-height: 1.5; }
-
-  .widget-tile {
-    position: relative; width: 54px; height: 54px; border-radius: 15px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; user-select: none; overflow: visible;
-  }
-  .widget-tile.pulse { animation: tilePulse 0.35s ease; }
-  .widget-tile-num { font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 700; font-size: 17px; color: #241B3A; }
-  @keyframes tilePulse { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }
-
-  .flyup {
-    position: absolute; left: 50%; top: 40%; transform: translateX(-50%);
-    font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 700; font-size: 20px;
-    color: #FFF6F0; pointer-events: none; animation: flyUp 0.9s ease-out forwards;
-  }
-  @keyframes flyUp {
-    0% { opacity: 0; transform: translate(-50%, 0) scale(0.8); }
-    20% { opacity: 1; transform: translate(-50%, -6px) scale(1.1); }
-    100% { opacity: 0; transform: translate(-50%, -46px) scale(1); }
-  }
-
-  .app-view { width: 340px; max-width: 100%; }
+  .app-view { width: 340px; max-width: 100%; margin-top: 8px; }
   .panel { background: #34275A; border-radius: 22px; padding: 22px; margin-bottom: 12px; }
   .panel-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
   .month-label { font-size: 11px; color: #C9BCE0; font-weight: 700; }
@@ -161,20 +108,7 @@
 </head>
 <body>
 
-<div class="brand">
-  <div class="brand-eyebrow">Buddy</div>
-  <div class="brand-title" id="brandTitle">Buddy</div>
-</div>
-
-<!-- =========================================================
-<div class="tabs">
-  <button class="tab-btn active" data-tab="widget" id="tabWidgetBtn">🏠 Écran d'accueil</button>
-  <button class="tab-btn" data-tab="app" id="tabAppBtn">▦ Application</button>
-</div>
-   ========================================================= */-->
-
-<div id="widgetView"></div>
-<div id="appView" style="display:none;"></div>
+<div id="appView"></div>
 <div id="settingsModalRoot"></div>
 
 <div class="offline-note">Fonctionne hors-ligne · données stockées sur cet appareil</div>
@@ -193,12 +127,12 @@ function defaultState() {
   const now = new Date();
   return {
     monthLabel: `${MONTHS_FR[now.getMonth()]} ${now.getFullYear()}`,
-    budgetMensuel: 500,
-    objectifMax: 450,
+    budgetMensuel: 900,
+    objectifMax: 750,
     defaultIncrement: 5,
     mascot: "blob",
     spent: 0,
-    presets: [-5, 5, 10, 20],
+    presets: [1, 5, 10, 20],
     history: [],
   };
 }
@@ -228,11 +162,7 @@ function clampPct(p) { return Math.min(96, Math.max(4, p * 100)); }
 
 /* ---------- state ---------- */
 let state = loadState();
-let tab = "widget";
 let showSettings = false;
-let flyupIdCounter = 0;
-let activeFlyups = [];
-let pulseTick = 0;
 
 function updateState(updater) {
   state = typeof updater === "function" ? updater(state) : updater;
@@ -325,23 +255,13 @@ function mascotSvg(type, moodKey, size, color) {
 }
 
 /* ---------- actions ---------- */
-function addSpend(amount, withFx) {
+function addSpend(amount) {
   if (!amount || amount <= 0) return;
   updateState((prev) => ({
     ...prev,
     spent: prev.spent + amount,
     history: [{ id: Date.now(), amount, ts: Date.now() }, ...prev.history].slice(0, 100),
   }));
-/*  if (withFx) {
-    const id = ++flyupIdCounter;
-    activeFlyups.push({ id, amount });
-    pulseTick++;
-    renderWidgetView();
-    setTimeout(() => {
-      activeFlyups = activeFlyups.filter((f) => f.id !== id);
-      renderWidgetView();
-    }, 900);
-  }/*
 }
 function removeHistoryEntry(id) {
   updateState((prev) => {
@@ -366,38 +286,6 @@ function removePreset(v) {
 
 /* ---------- rendering ---------- */
 function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
-
-/*function renderWidgetView() {
-  const m = mood(state.spent, state.objectifMax);
-  const root = document.getElementById("widgetView");
-  const appIcons = ["Photos","Mail","Notes","Météo","Musique","Cam","Plans"];
-  root.innerHTML = `
-    <div class="phone">
-      <div class="notch"></div>
-      <div class="statusbar"><span>9:41</span><span>100%</span></div>
-      <div class="phone-content">
-        <div class="widget-grid">
-          <div class="widget-cell">
-            <div id="widgetTile" class="widget-tile ${pulseTick ? "pulse" : ""}" style="background:linear-gradient(155deg, ${m.color}, ${m.dark})">
-              <span class="widget-tile-num">${fmt(state.spent)}</span>
-              <div id="flyupsHost"></div>
-            </div>
-          </div>
-          ${appIcons.map((name) => `
-            <div class="widget-cell">
-              <div class="app-icon-placeholder"></div>
-              <span class="app-icon-label">${esc(name)}</span>
-            </div>`).join("")}
-        </div>
-        <div class="widget-hint">Widget 1×1 : un tap ajoute<br><strong style="color:#FFF6F0">+${fmt(state.defaultIncrement)}</strong> automatiquement</div>
-      </div>
-    </div>
-  `;
-  document.getElementById("widgetTile").addEventListener("click", () => addSpend(state.defaultIncrement, true));
-  const flyHost = document.getElementById("flyupsHost");
-  flyHost.innerHTML = activeFlyups.map((f) => `<span class="flyup">+${fmt(f.amount)}</span>`).join("");
-}
-/*/*
 
 function renderAppView() {
   const m = mood(state.spent, state.objectifMax);
@@ -459,12 +347,12 @@ function renderAppView() {
 
   document.getElementById("openSettingsBtn").addEventListener("click", () => { showSettings = true; renderSettingsModal(); });
   root.querySelectorAll("[data-preset]").forEach((btn) => {
-    btn.addEventListener("click", () => addSpend(parseFloat(btn.dataset.preset), false));
+    btn.addEventListener("click", () => addSpend(parseFloat(btn.dataset.preset)));
   });
   document.getElementById("addCustomBtn").addEventListener("click", () => {
     const input = document.getElementById("customAmountInput");
     const v = parseFloat(input.value);
-    if (v > 0) { addSpend(v, false); input.value = ""; }
+    if (v > 0) { addSpend(v); input.value = ""; }
   });
   document.getElementById("resetMonthBtn").addEventListener("click", resetMonth);
   root.querySelectorAll("[data-histid]").forEach((btn) => {
@@ -566,21 +454,8 @@ function renderSettingsModal() {
 }
 
 function render() {
-  document.getElementById("widgetView").style.display = tab === "widget" ? "" : "none";
-  document.getElementById("appView").style.display = tab === "app" ? "" : "none";
-  /*renderWidgetView();*/
   renderAppView();
   renderSettingsModal();
-}
-
-/* ---------- tabs ---------- */
-document.getElementById("tabWidgetBtn").addEventListener("click", () => setTab("widget"));
-document.getElementById("tabAppBtn").addEventListener("click", () => setTab("app"));
-function setTab(t) {
-  tab = t;
-  document.getElementById("tabWidgetBtn").classList.toggle("active", t === "widget");
-  document.getElementById("tabAppBtn").classList.toggle("active", t === "app");
-  render();
 }
 
 /* ---------- init ---------- */
