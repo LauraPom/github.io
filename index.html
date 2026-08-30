@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Buddy — Suivi de budget</title>
+<meta name="theme-color" content="#241B3A" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overscroll-behavior: none; }
+  body {
+    background: radial-gradient(circle at 20% 0%, #3A2A64 0%, #241B3A 55%);
+    font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+    color: #FFF6F0;
+    min-height: 100vh;
+    padding: max(24px, env(safe-area-inset-top)) 12px max(24px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+  button, input { font-family: inherit; }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; }
+
+  .app-view { width: 340px; max-width: 100%; margin-top: 8px; }
+  .panel { background: #34275A; border-radius: 22px; padding: 22px; margin-bottom: 12px; }
+  .panel-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .month-label { font-size: 11px; color: #C9BCE0; font-weight: 700; }
+  .icon-btn { background: #3E2F68; border: none; border-radius: 10px; padding: 8px; cursor: pointer; display: flex; }
+  .mascot-row { display: flex; justify-content: center; margin: 8px 0 4px; }
+
+  .big-number {
+    font-family: 'Baloo 2', 'Nunito', ui-rounded, system-ui, sans-serif;
+    font-weight: 700; font-size: 48px; color: #FFF6F0;
+    display: block; text-align: center; letter-spacing: -1px;
+    animation: popNum 0.35s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popNum {
+    0% { transform: scale(0.7); opacity: 0.4; }
+    60% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .jar-wrap { position: relative; padding-top: 20px; margin: 22px 0 6px; }
+  .jar-tag { position: absolute; top: 0; transform: translateX(-50%); font-size: 10px; font-weight: 700; white-space: nowrap; opacity: 0.85; }
+  .jar { position: relative; width: 100%; height: 16px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.3); }
+  .jar-liquid { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 999px; transition: width 0.5s cubic-bezier(.34,1.56,.64,1), background 0.4s ease; }
+  .jar-marker { position: absolute; top: -3px; bottom: -3px; width: 2px; transform: translateX(-1px); }
+  .jar-marker-objectif { background: rgba(255,246,240,0.35); }
+  .jar-marker-budget { background: #FFF6F0; box-shadow: 0 0 6px rgba(255,246,240,0.7); }
+  .jar-scale-row { display: flex; justify-content: space-between; font-size: 11px; color: #C9BCE0; }
+  .mood-text { margin-top: 12px; font-size: 13px; color: #FFF6F0; font-weight: 700; text-align: center; }
+
+  .section-label { font-size: 12px; color: #C9BCE0; margin-bottom: 10px; font-weight: 700; }
+  .presets-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .preset-btn { flex: 1 1 20%; background: #2A2050; border: none; border-radius: 12px; padding: 10px 0; color: #FFF6F0; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .custom-row { display: flex; gap: 8px; }
+  .text-input { flex: 1; background: #2A2050; border: none; border-radius: 12px; padding: 10px 12px; color: #FFF6F0; font-size: 13px; width: 100%; }
+  .add-btn { background: #FF8FE0; border: none; border-radius: 12px; padding: 0 14px; color: #241B3A; cursor: pointer; display: flex; align-items: center; }
+
+  .history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .ghost-btn { display: flex; align-items: center; gap: 4; background: transparent; border: none; color: #C9BCE0; font-size: 11px; cursor: pointer; }
+  .history-empty { font-size: 12px; color: #C9BCE0; text-align: center; padding: 16px 0; }
+  .history-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+  .history-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #2A2050; border-radius: 10px; }
+  .history-time { font-size: 11px; color: #C9BCE0; }
+  .history-amount { font-size: 14px; color: #FFF6F0; font-family: 'Baloo 2', sans-serif; font-weight: 700; }
+  .history-del { background: transparent; border: none; cursor: pointer; color: #C9BCE0; display: flex; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(20,12,40,0.7); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal-box { background: #34275A; border-radius: 22px; padding: 22px; width: 320px; max-width: 100%; max-height: 85vh; overflow-y: auto; }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-title { font-size: 15px; color: #FFF6F0; font-weight: 700; font-family: 'Baloo 2', sans-serif; }
+  .field-label { font-size: 11px; color: #C9BCE0; font-weight: 700; display: block; margin-bottom: 6px; }
+  .field-input { width: 100%; margin-bottom: 14px; background: #2A2050; border: none; border-radius: 12px; padding: 10px 12px; color: #FFF6F0; font-size: 13px; }
+  .mascot-picker { display: flex; gap: 8px; margin: 8px 0 16px; }
+  .mascot-opt { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 14px; border: 2px solid transparent; background: #2A2050; cursor: pointer; }
+  .mascot-opt.active { border-color: #FF8FE0; }
+  .mascot-opt-label { font-size: 10px; color: #FFF6F0; font-weight: 700; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+  .chip { display: flex; align-items: center; gap: 6px; background: #2A2050; border-radius: 10px; padding: 6px 8px; }
+  .chip-amount { font-size: 12px; color: #FFF6F0; font-weight: 700; }
+  .chip-del { background: transparent; border: none; cursor: pointer; display: flex; }
+  .modal-done { width: 100%; margin-top: 18px; background: #6FE7C4; border: none; border-radius: 12px; padding: 10px 0; color: #241B3A; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+  .offline-note { font-size: 10px; color: #C9BCE0; opacity: 0.6; text-align: center; margin-top: 4px; }
+
+  .bobble-anim { animation: bobble 2.4s ease-in-out infinite; }
+  @keyframes bobble {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-2px) rotate(-2deg); }
+  }
+  .plant-bobble { animation: plantBobble 2.4s ease-in-out infinite; }
+  @keyframes plantBobble {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-1.5px); }
+  }
+</style>
+</head>
+<body>
+
+<div id="appView"></div>
+<div id="settingsModalRoot"></div>
+
+<div class="offline-note">Fonctionne hors-ligne · données stockées sur cet appareil</div>
+
+<script>
+/* =========================================================
+   Buddy — suivi de budget (PWA autonome, sans dépendance)
+   Portage vanilla JS du prototype React d'origine.
+   ========================================================= */
+
+const STORAGE_KEY = "budget-tracker-state-v2";
+
+const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+function defaultState() {
+  const now = new Date();
+  return {
+    monthLabel: `${MONTHS_FR[now.getMonth()]} ${now.getFullYear()}`,
+    budgetMensuel: 900,
+    objectifMax: 750,
+    defaultIncrement: 5,
+    mascot: "blob",
+    spent: 0,
+    presets: [1, 5, 10, 20],
+    history: [],
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : defaultState();
+  } catch (e) {
+    return defaultState();
+  }
+}
+function saveState(s) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) { /* best-effort */ }
+}
+
+function fmt(n) { return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(n)); }
+
+function mood(spent, objectifMax) {
+  const ratio = objectifMax > 0 ? spent / objectifMax : 0;
+  if (ratio < 0.7) return { key: "happy", color: "#6FE7C4", dark: "#1E7A5F", text: "Ça roule tranquille ✌️" };
+  if (ratio < 1) return { key: "neutral", color: "#FFD166", dark: "#8A6A1A", text: "Ça se resserre un peu 👀" };
+  return { key: "worried", color: "#FF6B6B", dark: "#8A2E2E", text: "Aïe, ça déborde ! 🫠" };
+}
+
+function clampPct(p) { return Math.min(96, Math.max(4, p * 100)); }
+
+/* ---------- state ---------- */
+let state = loadState();
+let showSettings = false;
+
+function updateState(updater) {
+  state = typeof updater === "function" ? updater(state) : updater;
+  saveState(state);
+  render();
+}
+
+/* ---------- mascots (SVG strings) ---------- */
+function blobFace(moodKey, size, color) {
+  const mouth = moodKey === "happy"
+    ? `<path d="M12 25 Q20 33 28 25" stroke="#241B3A" stroke-width="2.6" fill="none" stroke-linecap="round"/>`
+    : moodKey === "neutral"
+    ? `<path d="M13 27 Q20 27 27 27" stroke="#241B3A" stroke-width="2.6" fill="none" stroke-linecap="round"/>`
+    : `<path d="M12 29 Q20 22 28 29" stroke="#241B3A" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" class="bobble-anim">
+    <circle cx="20" cy="20" r="19" fill="${color}"/>
+    <circle cx="14" cy="18" r="2.6" fill="#241B3A"/>
+    <circle cx="26" cy="18" r="2.6" fill="#241B3A"/>
+    ${mouth}
+  </svg>`;
+}
+function catFace(moodKey, size) {
+  const fur = "#FBD9B4";
+  const ear = moodKey === "worried" ? -50 : moodKey === "neutral" ? -12 : 0;
+  const eyeR = moodKey === "worried" ? 3.4 : 4.2;
+  const eyes = moodKey === "happy"
+    ? `<path d="M10.5 19 Q13.5 15.5 16.5 19" stroke="#241B3A" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+       <path d="M23.5 19 Q26.5 15.5 29.5 19" stroke="#241B3A" stroke-width="2.2" fill="none" stroke-linecap="round"/>`
+    : `<circle cx="14" cy="20" r="${eyeR}" fill="#241B3A"/><circle cx="26" cy="20" r="${eyeR}" fill="#241B3A"/>
+       <circle cx="15.1" cy="18.8" r="1.1" fill="#FFF6F0"/><circle cx="27.1" cy="18.8" r="1.1" fill="#FFF6F0"/>`;
+  const whiskersWorried = moodKey === "worried"
+    ? `<path d="M10.5 16 L15.5 17.8" stroke="#241B3A" stroke-width="1.4" stroke-linecap="round"/>
+       <path d="M29.5 16 L24.5 17.8" stroke="#241B3A" stroke-width="1.4" stroke-linecap="round"/>` : "";
+  const mouth = moodKey === "happy"
+    ? `<path d="M15 27.5 Q20 31 25 27.5" stroke="#241B3A" stroke-width="2" fill="none" stroke-linecap="round"/>`
+    : moodKey === "neutral"
+    ? `<path d="M16 28 Q20 29.4 24 28" stroke="#241B3A" stroke-width="2" fill="none" stroke-linecap="round"/>`
+    : `<path d="M16 29.5 Q20 26.5 24 29.5" stroke="#241B3A" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" class="bobble-anim">
+    <g style="transform-origin:10px 11px; transform:rotate(${ear}deg)">
+      <path d="M4 15 L8 3 L16 13 Z" fill="${fur}"/><path d="M6.5 12.5 L9 6 L13 11.5 Z" fill="#FFB6C1"/>
+    </g>
+    <g style="transform-origin:30px 11px; transform:rotate(${-ear}deg)">
+      <path d="M36 15 L32 3 L24 13 Z" fill="${fur}"/><path d="M33.5 12.5 L31 6 L27 11.5 Z" fill="#FFB6C1"/>
+    </g>
+    <circle cx="20" cy="22" r="17" fill="${fur}"/>
+    <circle cx="12" cy="26" r="3.4" fill="#FFB6C1" opacity="0.6"/>
+    <circle cx="28" cy="26" r="3.4" fill="#FFB6C1" opacity="0.6"/>
+    ${eyes}${whiskersWorried}
+    <path d="M20 24 L18.6 25.8 L21.4 25.8 Z" fill="#E0916B"/>
+    ${mouth}
+    <g stroke="#C99B6E" stroke-width="1.1" stroke-linecap="round">
+      <line x1="6" y1="24" x2="14" y2="25"/><line x1="6" y1="27.5" x2="14" y2="27"/>
+      <line x1="34" y1="24" x2="26" y2="25"/><line x1="34" y1="27.5" x2="26" y2="27"/>
+    </g>
+  </svg>`;
+}
+function appleFace(moodKey, size) {
+  const skin = moodKey === "happy" ? "#8DE39C" : moodKey === "neutral" ? "#FFD166" : "#C97B4A";
+  const leafAngle = moodKey === "happy" ? -20 : moodKey === "neutral" ? 0 : 35;
+  const worried = moodKey === "worried"
+    ? `<ellipse cx="12" cy="24" rx="2.6" ry="2" fill="#8A4A2E" opacity="0.5"/><ellipse cx="27" cy="29" rx="2" ry="1.6" fill="#8A4A2E" opacity="0.5"/>` : "";
+  return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" class="bobble-anim">
+    <rect x="18.5" y="1" width="3" height="8" rx="1.4" fill="#7A5230"/>
+    <ellipse cx="23" cy="6" rx="6.5" ry="3.2" fill="#3E8560" style="transform-origin:20px 4px; transform:rotate(${leafAngle}deg); transition:transform .4s ease"/>
+    <path d="M20 8 Q13 3 8 10 Q3 16 4 24 Q5 35 20 38 Q35 35 36 24 Q37 16 32 10 Q27 3 20 8 Z" fill="${skin}" style="transition:fill .4s ease"/>
+    ${worried}
+  </svg>`;
+}
+function plantFace(moodKey, size) {
+  const leafColor = moodKey === "happy" ? "#6FE7C4" : moodKey === "neutral" ? "#FFD166" : "#D97757";
+  const angle = moodKey === "happy" ? 35 : moodKey === "neutral" ? 58 : 82;
+  const leaf = (x, y, rot) => `<ellipse cx="${x}" cy="${y}" rx="7" ry="3.4" fill="${leafColor}" style="transform-origin:${x}px ${y}px; transform:rotate(${rot}deg); transition:transform .4s ease, fill .4s ease"/>`;
+  const flower = moodKey === "happy" ? `<circle cx="20" cy="5" r="2.6" fill="#FF8FE0"/>` : "";
+  return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" class="plant-bobble">
+    <line x1="20" y1="27" x2="20" y2="13" stroke="#3E8560" stroke-width="2.4" stroke-linecap="round"/>
+    ${leaf(13, 13, angle)}
+    ${leaf(27, 13, -angle)}
+    ${leaf(20, 8, angle * 0.6)}
+    ${flower}
+    <rect x="10" y="27" width="20" height="12" rx="4" fill="#C97B4A"/>
+    <rect x="10" y="27" width="20" height="4" rx="2" fill="#B96A3C"/>
+  </svg>`;
+}
+function mascotSvg(type, moodKey, size, color) {
+  if (type === "chat") return catFace(moodKey, size);
+  if (type === "plante") return plantFace(moodKey, size);
+  if (type === "pomme") return appleFace(moodKey, size);
+  return blobFace(moodKey, size, color);
+}
+
+/* ---------- actions ---------- */
+function addSpend(amount) {
+  if (!amount || amount <= 0) return;
+  updateState((prev) => ({
+    ...prev,
+    spent: prev.spent + amount,
+    history: [{ id: Date.now(), amount, ts: Date.now() }, ...prev.history].slice(0, 100),
+  }));
+}
+function removeHistoryEntry(id) {
+  updateState((prev) => {
+    const entry = prev.history.find((h) => h.id === id);
+    if (!entry) return prev;
+    return { ...prev, spent: Math.max(0, prev.spent - entry.amount), history: prev.history.filter((h) => h.id !== id) };
+  });
+}
+function resetMonth() {
+  updateState((prev) => {
+    const now = new Date();
+    return { ...prev, monthLabel: `${MONTHS_FR[now.getMonth()]} ${now.getFullYear()}`, spent: 0, history: [] };
+  });
+}
+function addPreset(v) {
+  if (!v || v <= 0 || state.presets.includes(v)) return;
+  updateState((prev) => ({ ...prev, presets: [...prev.presets, v].sort((a, b) => a - b).slice(0, 6) }));
+}
+function removePreset(v) {
+  updateState((prev) => ({ ...prev, presets: prev.presets.filter((p) => p !== v) }));
+}
+
+/* ---------- rendering ---------- */
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+function renderAppView() {
+  const m = mood(state.spent, state.objectifMax);
+  const scaleMax = Math.max(state.objectifMax, state.budgetMensuel, state.spent, 1);
+  const pct = Math.min(1, state.spent / scaleMax);
+  const objectifPct = Math.min(1, state.objectifMax / scaleMax);
+  const budgetPct = Math.min(1, state.budgetMensuel / scaleMax);
+
+  const root = document.getElementById("appView");
+  root.innerHTML = `
+    <div class="app-view">
+      <div class="panel" style="text-align:center;">
+        <div class="panel-top-row">
+          <span class="month-label">${esc(state.monthLabel)}</span>
+          <button class="icon-btn" id="openSettingsBtn">⚙️</button>
+        </div>
+        <div class="mascot-row">${mascotSvg(state.mascot || "blob", m.key, 64, m.color)}</div>
+        <span class="big-number">${fmt(state.spent)}</span>
+        <div class="jar-wrap">
+          <div class="jar-tag" style="left:${clampPct(budgetPct)}%; color:#FFF6F0;">budget</div>
+          <div class="jar">
+            <div class="jar-liquid" style="width:${pct * 100}%; background:${m.color};"></div>
+            <div class="jar-marker jar-marker-objectif" style="left:${objectifPct * 100}%;"></div>
+            <div class="jar-marker jar-marker-budget" style="left:${budgetPct * 100}%;"></div>
+          </div>
+        </div>
+        <div class="jar-scale-row"><span>0</span><span>objectif ${fmt(state.objectifMax)}</span></div>
+        <div class="mood-text">${m.text}</div>
+      </div>
+
+      <div class="panel">
+        <div class="section-label">Ajouter une dépense</div>
+        <div class="presets-row">
+          ${state.presets.map((p) => `<button class="preset-btn" data-preset="${p}">+${p}</button>`).join("")}
+        </div>
+        <div class="custom-row">
+          <input class="text-input" id="customAmountInput" type="number" placeholder="Autre montant" />
+          <button class="add-btn" id="addCustomBtn">➕</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="history-head">
+          <span class="section-label" style="margin:0;">Historique</span>
+          <button class="ghost-btn" id="resetMonthBtn">↺ Nouveau mois</button>
+        </div>
+        ${state.history.length === 0
+          ? `<div class="history-empty">Rien pour l'instant, allez-y molo 🌱</div>`
+          : `<div class="history-list">${state.history.map((h) => `
+              <div class="history-row">
+                <span class="history-time">${new Date(h.ts).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+                <span class="history-amount">+${fmt(h.amount)}</span>
+                <button class="history-del" data-histid="${h.id}">🗑️</button>
+              </div>`).join("")}</div>`
+        }
+      </div>
+    </div>
+  `;
+
+  document.getElementById("openSettingsBtn").addEventListener("click", () => { showSettings = true; renderSettingsModal(); });
+  root.querySelectorAll("[data-preset]").forEach((btn) => {
+    btn.addEventListener("click", () => addSpend(parseFloat(btn.dataset.preset)));
+  });
+  document.getElementById("addCustomBtn").addEventListener("click", () => {
+    const input = document.getElementById("customAmountInput");
+    const v = parseFloat(input.value);
+    if (v > 0) { addSpend(v); input.value = ""; }
+  });
+  document.getElementById("resetMonthBtn").addEventListener("click", resetMonth);
+  root.querySelectorAll("[data-histid]").forEach((btn) => {
+    btn.addEventListener("click", () => removeHistoryEntry(Number(btn.dataset.histid)));
+  });
+}
+
+function renderSettingsModal() {
+  const host = document.getElementById("settingsModalRoot");
+  if (!showSettings) { host.innerHTML = ""; return; }
+  const m = mood(state.spent, state.objectifMax);
+  const mascots = [
+    { id: "blob", label: "Blob" },
+    { id: "chat", label: "Chaton" },
+    { id: "plante", label: "Plante" },
+    { id: "pomme", label: "Pomme" },
+  ];
+  host.innerHTML = `
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-box" id="modalBox">
+        <div class="modal-head">
+          <span class="modal-title">Réglages</span>
+          <button class="icon-btn" id="closeSettingsBtn">✕</button>
+        </div>
+
+        <label class="field-label">Budget mensuel</label>
+        <input class="field-input" id="budgetMensuelInput" type="number" value="${state.budgetMensuel}" />
+
+        <label class="field-label">Objectif de dépense max</label>
+        <input class="field-input" id="objectifMaxInput" type="number" value="${state.objectifMax}" />
+
+        <label class="field-label">Montant du widget (1 tap)</label>
+        <input class="field-input" id="defaultIncrementInput" type="number" value="${state.defaultIncrement}" />
+
+        <label class="field-label">Personnage</label>
+        <div class="mascot-picker">
+          ${mascots.map((opt) => `
+            <button class="mascot-opt ${((state.mascot || "blob") === opt.id) ? "active" : ""}" data-mascot="${opt.id}">
+              ${mascotSvg(opt.id, m.key, 34, m.color)}
+              <span class="mascot-opt-label">${opt.label}</span>
+            </button>`).join("")}
+        </div>
+
+        <label class="field-label">Boutons rapides (dans l'app)</label>
+        <div class="chip-row">
+          ${state.presets.map((p) => `
+            <div class="chip">
+              <span class="chip-amount">+${p}</span>
+              <button class="chip-del" data-delpreset="${p}">✕</button>
+            </div>`).join("")}
+        </div>
+        <div class="custom-row">
+          <input class="text-input" id="newPresetInput" type="number" placeholder="Nouveau montant" />
+          <button class="add-btn" id="addPresetBtn">➕</button>
+        </div>
+
+        <button class="modal-done" id="doneSettingsBtn">✓ Terminé</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("modalOverlay").addEventListener("click", (e) => {
+    if (e.target.id === "modalOverlay") { showSettings = false; renderSettingsModal(); }
+  });
+  document.getElementById("closeSettingsBtn").addEventListener("click", () => { showSettings = false; renderSettingsModal(); });
+  document.getElementById("doneSettingsBtn").addEventListener("click", () => { showSettings = false; renderSettingsModal(); });
+
+  document.getElementById("budgetMensuelInput").addEventListener("change", (e) => {
+    updateState((prev) => ({ ...prev, budgetMensuel: Math.max(0, parseFloat(e.target.value) || 0) }));
+    renderSettingsModal();
+  });
+  document.getElementById("objectifMaxInput").addEventListener("change", (e) => {
+    updateState((prev) => ({ ...prev, objectifMax: Math.max(0, parseFloat(e.target.value) || 0) }));
+    renderSettingsModal();
+  });
+  document.getElementById("defaultIncrementInput").addEventListener("change", (e) => {
+    updateState((prev) => ({ ...prev, defaultIncrement: Math.max(0, parseFloat(e.target.value) || 0) }));
+    renderSettingsModal();
+  });
+  host.querySelectorAll("[data-mascot]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      updateState((prev) => ({ ...prev, mascot: btn.dataset.mascot }));
+      renderSettingsModal();
+    });
+  });
+  host.querySelectorAll("[data-delpreset]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      removePreset(parseFloat(btn.dataset.delpreset));
+      renderSettingsModal();
+    });
+  });
+  document.getElementById("addPresetBtn").addEventListener("click", () => {
+    const input = document.getElementById("newPresetInput");
+    const v = parseFloat(input.value);
+    addPreset(v);
+    input.value = "";
+    renderSettingsModal();
+  });
+}
+
+function render() {
+  renderAppView();
+  renderSettingsModal();
+}
+
+/* ---------- init ---------- */
+render();
+
+/* ---------- PWA: service worker ---------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
