@@ -166,10 +166,12 @@
   <div class="brand-title" id="brandTitle">Buddy</div>
 </div>
 
+<!-- =========================================================
 <div class="tabs">
   <button class="tab-btn active" data-tab="widget" id="tabWidgetBtn">🏠 Écran d'accueil</button>
   <button class="tab-btn" data-tab="app" id="tabAppBtn">▦ Application</button>
 </div>
+   ========================================================= */-->
 
 <div id="widgetView"></div>
 <div id="appView" style="display:none;"></div>
@@ -196,7 +198,7 @@ function defaultState() {
     defaultIncrement: 5,
     mascot: "blob",
     spent: 0,
-    presets: [1, 5, 10, 20],
+    presets: [-5, 5, 10, 20],
     history: [],
   };
 }
@@ -365,7 +367,7 @@ function removePreset(v) {
 /* ---------- rendering ---------- */
 function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
 
-function renderWidgetView() {
+/*function renderWidgetView() {
   const m = mood(state.spent, state.objectifMax);
   const root = document.getElementById("widgetView");
   const appIcons = ["Photos","Mail","Notes","Météo","Musique","Cam","Plans"];
@@ -395,6 +397,7 @@ function renderWidgetView() {
   const flyHost = document.getElementById("flyupsHost");
   flyHost.innerHTML = activeFlyups.map((f) => `<span class="flyup">+${fmt(f.amount)}</span>`).join("");
 }
+/*/*
 
 function renderAppView() {
   const m = mood(state.spent, state.objectifMax);
