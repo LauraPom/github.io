@@ -332,7 +332,7 @@ function addSpend(amount, withFx) {
     spent: prev.spent + amount,
     history: [{ id: Date.now(), amount, ts: Date.now() }, ...prev.history].slice(0, 100),
   }));
-  if (withFx) {
+/*  if (withFx) {
     const id = ++flyupIdCounter;
     activeFlyups.push({ id, amount });
     pulseTick++;
@@ -341,7 +341,7 @@ function addSpend(amount, withFx) {
       activeFlyups = activeFlyups.filter((f) => f.id !== id);
       renderWidgetView();
     }, 900);
-  }
+  }/*
 }
 function removeHistoryEntry(id) {
   updateState((prev) => {
@@ -568,7 +568,7 @@ function renderSettingsModal() {
 function render() {
   document.getElementById("widgetView").style.display = tab === "widget" ? "" : "none";
   document.getElementById("appView").style.display = tab === "app" ? "" : "none";
-  renderWidgetView();
+  /*renderWidgetView();*/
   renderAppView();
   renderSettingsModal();
 }
